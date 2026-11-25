@@ -1,4 +1,4 @@
-package pe.edu.unsch.banco.infraestructura;
+package pe.edu.unsch.banco.infraestructura.salida;
 
 import pe.edu.unsch.banco.aplicacion.puertos.MovimientoRepository;
 
