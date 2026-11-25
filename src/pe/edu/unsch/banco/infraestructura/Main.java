@@ -1,7 +1,7 @@
 package pe.edu.unsch.banco.infraestructura;
 
 import pe.edu.unsch.banco.aplicacion.CuentaService;
-import pe.edu.unsch.banco.aplicacion.MovimientoRepository;
+import pe.edu.unsch.banco.aplicacion.puertos.MovimientoRepository;
 import pe.edu.unsch.banco.aplicacion.puertos.CuentaUseCase;
 
 import java.io.UncheckedIOException;
