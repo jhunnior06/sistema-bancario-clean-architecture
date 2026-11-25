@@ -1,16 +1,17 @@
 package pe.edu.unsch.banco.aplicacion;
 
+import pe.edu.unsch.banco.aplicacion.puertos.CuentaUseCase;
 import pe.edu.unsch.banco.dominio.CuentaBancaria;
 
 import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * Casos de uso: registrar, depositar, retirar y consultar.
- * Recibe el repositorio por constructor (inversion de dependencias):
- * no sabe si los movimientos van a un archivo, a H2 o a otro medio.
+ * Caso de uso del sistema bancario.
+ * Implementa el puerto de entrada CuentaUseCase y, para guardar los movimientos,
+ * solo conoce la interfaz MovimientoRepository, no sabe si van a un archivo o a memoria.
  */
-public class CuentaService {
+public class CuentaService implements CuentaUseCase {
 
     private final MovimientoRepository movimientoRepository;
     private CuentaBancaria cuentaActiva;
@@ -20,7 +21,8 @@ public class CuentaService {
                 "Se requiere un MovimientoRepository");
     }
 
-    public CuentaBancaria registrar(String titular, BigDecimal saldoInicial) {
+    @Override
+    public void registrarCuenta(String titular, BigDecimal saldoInicial) {
         if (cuentaActiva != null) {
             throw new IllegalStateException("Ya existe una cuenta activa a nombre de "
                     + cuentaActiva.getTitular() + ". No se puede reemplazar.");
@@ -29,33 +31,39 @@ public class CuentaService {
         cuentaActiva = nueva;
         movimientoRepository.guardar("Cuenta creada | Titular: " + nueva.getTitular()
                 + " | Saldo inicial: S/ " + nueva.getSaldo());
-        return nueva;
     }
 
-    public BigDecimal depositar(BigDecimal monto) {
+    @Override
+    public void depositar(BigDecimal monto) {
         CuentaBancaria cuenta = obtenerCuentaActiva();
         cuenta.depositar(monto);
         movimientoRepository.guardar("Titular: " + cuenta.getTitular()
                 + " | Deposito: S/ " + monto.setScale(2)
                 + " | Saldo actual: S/ " + cuenta.getSaldo());
-        return cuenta.getSaldo();
     }
 
-    public BigDecimal retirar(BigDecimal monto) {
+    @Override
+    public void retirar(BigDecimal monto) {
         CuentaBancaria cuenta = obtenerCuentaActiva();
         cuenta.retirar(monto);
         movimientoRepository.guardar("Titular: " + cuenta.getTitular()
                 + " | Retiro: S/ " + monto.setScale(2)
                 + " | Saldo actual: S/ " + cuenta.getSaldo());
-        return cuenta.getSaldo();
     }
 
-    public boolean existeCuentaActiva() {
+    @Override
+    public BigDecimal consultarSaldo() {
+        return obtenerCuentaActiva().getSaldo();
+    }
+
+    @Override
+    public String consultarTitular() {
+        return obtenerCuentaActiva().getTitular();
+    }
+
+    @Override
+    public boolean existeCuenta() {
         return cuentaActiva != null;
-    }
-
-    public CuentaBancaria consultar() {
-        return obtenerCuentaActiva();
     }
 
     private CuentaBancaria obtenerCuentaActiva() {

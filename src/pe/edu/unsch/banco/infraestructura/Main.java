@@ -2,33 +2,34 @@ package pe.edu.unsch.banco.infraestructura;
 
 import pe.edu.unsch.banco.aplicacion.CuentaService;
 import pe.edu.unsch.banco.aplicacion.MovimientoRepository;
-import pe.edu.unsch.banco.dominio.CuentaBancaria;
+import pe.edu.unsch.banco.aplicacion.puertos.CuentaUseCase;
 
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.util.Scanner;
 
 /**
- * Entrada/presentacion: muestra el menu, lee datos, maneja errores
- * y ensambla las dependencias (inyecta el repositorio en el servicio).
+ * Adaptador de entrada por consola.
+ * Muestra el menú y lee los datos, pero las operaciones las pide a través del
+ * puerto CuentaUseCase, sin depender directamente de la clase CuentaService.
  */
 public class Main {
 
     private static final String AVISO_PERSISTENCIA =
             "AVISO: la cuenta se mantiene solo en memoria. Al cerrar el programa NO se restaura "
-            + "automaticamente; movimientos.txt es solo un historial.";
+                    + "automaticamente; movimientos.txt es solo un historial.";
 
     private final Scanner scanner;
-    private final CuentaService servicio;
+    private final CuentaUseCase servicio;
 
-    public Main(Scanner scanner, CuentaService servicio) {
+    public Main(Scanner scanner, CuentaUseCase servicio) {
         this.scanner = scanner;
         this.servicio = servicio;
     }
 
     public static void main(String[] args) {
-        MovimientoRepository repositorio = new ArchivoMovimientoRepository("movimientos.txt");
-        CuentaService servicio = new CuentaService(repositorio);
+        MovimientoRepository repository = new ArchivoMovimientoRepository("movimientos.txt");
+        CuentaUseCase servicio = new CuentaService(repository);
         new Main(new Scanner(System.in), servicio).iniciar();
     }
 
@@ -67,36 +68,34 @@ public class Main {
     }
 
     private void registrar() {
-        if (servicio.existeCuentaActiva()) {
-            // Aviso temprano; la regla real la hace cumplir CuentaService.registrar()
+        if (servicio.existeCuenta()) {
             System.out.println("Operacion rechazada: ya existe una cuenta activa a nombre de "
-                    + servicio.consultar().getTitular() + ". No se puede reemplazar.");
+                    + servicio.consultarTitular() + ". No se puede reemplazar.");
             return;
         }
         System.out.print("Ingrese titular: ");
         String titular = leerLinea();
         BigDecimal saldoInicial = leerImporte("Ingrese saldo inicial: ");
-        CuentaBancaria cuenta = servicio.registrar(titular, saldoInicial);
-        System.out.println("Cuenta registrada | Titular: " + cuenta.getTitular()
-                + " | Saldo: S/ " + cuenta.getSaldo());
+        servicio.registrarCuenta(titular, saldoInicial);
+        System.out.println("Cuenta registrada | Titular: " + servicio.consultarTitular()
+                + " | Saldo: S/ " + servicio.consultarSaldo());
     }
 
     private void depositar() {
-        servicio.consultar(); // falla temprano si no hay cuenta, antes de pedir el monto
-        BigDecimal saldo = servicio.depositar(leerImporte("Monto a depositar: "));
-        System.out.println("Deposito exitoso | Saldo actual: S/ " + saldo);
+        servicio.consultarSaldo(); // si no hay cuenta, avisa antes de pedir el monto
+        servicio.depositar(leerImporte("Monto a depositar: "));
+        System.out.println("Deposito exitoso | Saldo actual: S/ " + servicio.consultarSaldo());
     }
 
     private void retirar() {
-        servicio.consultar();
-        BigDecimal saldo = servicio.retirar(leerImporte("Monto a retirar: "));
-        System.out.println("Retiro exitoso | Saldo actual: S/ " + saldo);
+        servicio.consultarSaldo();
+        servicio.retirar(leerImporte("Monto a retirar: "));
+        System.out.println("Retiro exitoso | Saldo actual: S/ " + servicio.consultarSaldo());
     }
 
     private void consultar() {
-        CuentaBancaria cuenta = servicio.consultar();
-        System.out.println("Titular: " + cuenta.getTitular());
-        System.out.println("Saldo: S/ " + cuenta.getSaldo());
+        System.out.println("Titular: " + servicio.consultarTitular());
+        System.out.println("Saldo: S/ " + servicio.consultarSaldo());
     }
 
     private int leerOpcion() {
@@ -104,7 +103,7 @@ public class Main {
         try {
             return Integer.parseInt(texto);
         } catch (NumberFormatException e) {
-            return -1; // cae en "Opcion invalida" sin romper el programa
+            return -1;
         }
     }
 
