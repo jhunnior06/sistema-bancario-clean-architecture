@@ -1,6 +1,6 @@
 package pe.edu.unsch.banco.infraestructura;
 
-import pe.edu.unsch.banco.aplicacion.MovimientoRepository;
+import pe.edu.unsch.banco.aplicacion.puertos.MovimientoRepository;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
