@@ -1,40 +1,48 @@
-package pe.edu.unsch.banco.infraestructura;
+package pe.edu.unsch.banco.infraestructura.entrada;
 
 import pe.edu.unsch.banco.aplicacion.CuentaService;
-import pe.edu.unsch.banco.aplicacion.puertos.MovimientoRepository;
 import pe.edu.unsch.banco.aplicacion.puertos.CuentaUseCase;
+import pe.edu.unsch.banco.aplicacion.puertos.MovimientoRepository;
 import pe.edu.unsch.banco.infraestructura.salida.ArchivoMovimientoRepository;
+import pe.edu.unsch.banco.infraestructura.salida.MemoriaMovimientoRepository;
 
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.util.Scanner;
 
 /**
- * Adaptador de entrada por consola.
- * Muestra el menú y lee los datos, pero las operaciones las pide a través del
- * puerto CuentaUseCase, sin depender directamente de la clase CuentaService.
+ * Adaptador de entrada por consola y punto donde se arman las dependencias.
+ * Aquí se elige qué adaptador de salida usar; el dominio y el servicio no cambian.
  */
 public class Main {
 
     private static final String AVISO_PERSISTENCIA =
             "AVISO: la cuenta se mantiene solo en memoria. Al cerrar el programa NO se restaura "
-                    + "automaticamente; movimientos.txt es solo un historial.";
+                    + "automaticamente; solo se guarda el historial de movimientos.";
 
     private final Scanner scanner;
     private final CuentaUseCase servicio;
+    private final MovimientoRepository repository;
 
-    public Main(Scanner scanner, CuentaUseCase servicio) {
+    public Main(Scanner scanner, CuentaUseCase servicio, MovimientoRepository repository) {
         this.scanner = scanner;
         this.servicio = servicio;
+        this.repository = repository;
     }
 
     public static void main(String[] args) {
-        MovimientoRepository repository = new ArchivoMovimientoRepository("movimientos.txt");
+        // Prueba A: archivo
+        MovimientoRepository repository = new ArchivoMovimientoRepository();
+
+        // Prueba B: memoria (sustituye la linea anterior)
+        //MovimientoRepository repository = new MemoriaMovimientoRepository();
+
         CuentaUseCase servicio = new CuentaService(repository);
-        new Main(new Scanner(System.in), servicio).iniciar();
+        new Main(new Scanner(System.in), servicio, repository).iniciar();
     }
 
     private void iniciar() {
+        System.out.println("Adaptador de salida: " + repository.getClass().getSimpleName());
         System.out.println(AVISO_PERSISTENCIA);
         int opcion;
         do {
@@ -46,7 +54,7 @@ public class Main {
                     case 2 -> depositar();
                     case 3 -> retirar();
                     case 4 -> consultar();
-                    case 5 -> System.out.println("Saliendo del sistema...\n" + AVISO_PERSISTENCIA);
+                    case 5 -> salir();
                     default -> System.out.println("Opcion invalida");
                 }
             } catch (IllegalArgumentException | IllegalStateException e) {
@@ -97,6 +105,16 @@ public class Main {
     private void consultar() {
         System.out.println("Titular: " + servicio.consultarTitular());
         System.out.println("Saldo: S/ " + servicio.consultarSaldo());
+    }
+
+    private void salir() {
+        if (repository instanceof MemoriaMovimientoRepository memoria) {
+            System.out.println("Movimientos guardados en memoria (" + memoria.listarMovimientos().size() + "):");
+            memoria.listarMovimientos().forEach(m -> System.out.println("  " + m));
+        } else {
+            System.out.println("Movimientos guardados en movimientos.txt");
+        }
+        System.out.println("Saliendo del sistema...\n" + AVISO_PERSISTENCIA);
     }
 
     private int leerOpcion() {
